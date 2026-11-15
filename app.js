@@ -104,8 +104,14 @@ $("#form").onsubmit=async e=>{
   }catch(err){toast("تعذر الحفظ: "+err.message)}
 };
 $("#signInForm").onsubmit=signIn;
-$("#signUpBtn").onclick=()=>$("#signUpForm").requestSubmit();
-$("#signUpForm").onsubmit=signUp;
+$("#signUpBtn").onclick=async()=>{
+  const email=$("#email").value.trim(), password=$("#password").value;
+  if(!email || password.length<8){authView("أدخل البريد وكلمة مرور لا تقل عن 8 أحرف.");return}
+  const {data,error}=await supabase.auth.signUp({email,password});
+  if(error){authView(error.message);return}
+  if(data.session){await startApp();toast("تم إنشاء الحساب")}
+  else authView("تم إنشاء الحساب. افحص بريدك لتأكيد التسجيل ثم سجّل الدخول.");
+};
 supabase.auth.onAuthStateChange((_event,session)=>{if(!session){user=null;authView()}});
 try{await startApp()}catch(e){authView("تعذر الاتصال: "+e.message)}
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));

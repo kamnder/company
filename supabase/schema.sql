@@ -51,12 +51,15 @@ alter table public.company_members enable row level security;
 alter table public.tasks enable row level security;
 
 drop policy if exists "companies_select_members" on public.companies;
-create policy "companies_select_members" on public.companies
+create policy "companies_select_members_or_creator" on public.companies
 for select to authenticated
-using (exists (
-  select 1 from public.company_members m
-  where m.company_id = companies.id and m.user_id = (select auth.uid())
-));
+using (
+  created_by = (select auth.uid())
+  or exists (
+    select 1 from public.company_members m
+    where m.company_id = companies.id and m.user_id = (select auth.uid())
+  )
+);
 
 drop policy if exists "companies_insert_creator" on public.companies;
 create policy "companies_insert_creator" on public.companies
@@ -80,13 +83,9 @@ with check (exists (
 ));
 
 drop policy if exists "members_select_same_company" on public.company_members;
-create policy "members_select_same_company" on public.company_members
+create policy "members_select_own_membership" on public.company_members
 for select to authenticated
-using (exists (
-  select 1 from public.company_members mine
-  where mine.company_id = company_members.company_id
-    and mine.user_id = (select auth.uid())
-));
+using (user_id = (select auth.uid()));
 
 drop policy if exists "members_insert_initial_owner" on public.company_members;
 create policy "members_insert_initial_owner" on public.company_members
